@@ -131,8 +131,8 @@
       p[pid] = part;
       row.id = part.id;
       row.innerHTML = 
-        "<td><input type='number' class='big' value="+part.width+" step='0.01' min='0.01' style='width:4em' onchange='{p["+row.id+"].width=parseFloat(value); updateSheet();}'></td>"+
-        "<td><input type='number' class='big' value="+part.height+" step='0.01' min='0.01' style='width:4em' onchange='{p["+row.id+"].height=parseFloat(value); updateSheet();}'></td>"+
+        "<td><input type='number' class='big' value="+part.width+" step='0.01' min='0.01' style='width:4em' onchange='{p["+row.id+"].width=parseFloat(value); updatePage();}'></td>"+
+        "<td><input type='number' class='big' value="+part.height+" step='0.01' min='0.01' style='width:4em' onchange='{p["+row.id+"].height=parseFloat(value); updatePage();}'></td>"+
         "<td><input type='number' class='big' value="+part.qty+" min='0' style='width:3em' onchange='{p["+row.id+"].qty=parseInt(value); updateCount();}'></td>"+
         "<td class='no-print'>0</td>"+
         "<td><input type='button' value=&#x274C; onclick=delPart("+row.id+") tabindex=-1 class='btn no-print'></td>";
@@ -151,7 +151,7 @@
       }
       delete p[id];
 
-      updateSheet();
+      updatePage();
     }
 
     function addSheet() {
@@ -170,8 +170,8 @@
       row.id = sheet.id;
       row.innerHTML = 
         "<td>"+
-          "Length <input type='number' class='big' value="+sheet.width+" step='0.01' min='0.01' style='width:4em' onchange='s["+row.id+"].width=parseFloat(value); updateSheet();'>"+
-          " &#10006; Width <input type='number' class='big' value="+sheet.height+" step='0.01' min='0.01' style='width:4em' onchange='s["+row.id+"].height=parseFloat(value); updateSheet();'>"+
+          "Length <input type='number' class='big' value="+sheet.width+" step='0.01' min='0.01' style='width:4em' onchange='s["+row.id+"].width=parseFloat(value); updatePage();'>"+
+          " &#10006; Width <input type='number' class='big' value="+sheet.height+" step='0.01' min='0.01' style='width:4em' onchange='s["+row.id+"].height=parseFloat(value); updatePage();'>"+
           " Qty.: <input type='number' class='big' value="+sheet.qty+" min='0' style='width:3em' onchange='{s["+row.id+"].qty=parseInt(value); updateCount();}'>"+
           " <input type='button' value=&#x274C; onclick=delSheet("+row.id+") tabindex=-1 class='btn no-print'><br><br>"+
           "<div>"+
@@ -189,7 +189,7 @@
       sheet.svg = row.getElementsByTagName("svg")[0];
       sheet.rect = row.getElementsByTagName("rect")[0];
       s[pid] = sheet;
-      updateSheet();
+      updatePage();
       updateCount();
     }
 
@@ -201,10 +201,10 @@
       }
       delete s[id];
 
-      updateSheet();
+      updatePage();
     }
 
-    function updateSheet() {
+    function updatePage() {
       //update scale
       maxwidth = -1.0; 
       for (var key in s) {
