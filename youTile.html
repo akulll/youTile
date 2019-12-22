@@ -1,0 +1,457 @@
+<html>
+  <head>
+    <title>youTile</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body {
+        font-family: "Lato", sans-serif;
+      }
+      
+      .partlist {
+        width: 295px;
+        position: fixed;
+        background: #cfc;
+        overflow-x: hidden;
+      }
+            
+      .main {
+        margin-left: 300px; /* Same width as the sidebar + left position in px */
+      }
+
+      .print:last-child {
+        page-break-after: auto;
+      }
+
+      input {
+        font-family : inherit;
+      }
+
+      .btn {
+        font-family : inherit;
+        font-size   : 80%;
+      }
+
+      .big {
+        font-family : inherit;
+        font-size : 110%;
+      }
+
+      .comment {
+        font-style : italic;
+        font-weight : bolder;
+      }
+
+      @media print
+      {    
+        .no-print, .no-print *
+        {
+          display: none !important;
+        }
+        .big, .big *
+        {
+          font-size : 140%;
+        }
+      }
+
+    </style>  
+  </head>
+  <body>
+    <div class="partlist">
+      <table>
+        <tr>
+          <th align="left">Customer <input id="first2fill" type="text" class="big" style="width:13em"></th>
+        </tr>
+        <tr>
+          <th align="left">Material <input type="text" class="big" style="width:13em"></th>
+        </tr>
+        <tr class="no-print">
+          <th align="left">Cutting kerf width <input id="kerf" type="number" step="0.01" min="0.0" style="width:4em" value=3.0 onchange={kerf=parseFloat(this.value)}></th>
+        </tr>
+      </table>
+
+      <p contenteditable="true" class="big comment">*</p>
+
+      <table id="parts">
+        <tr>
+          <th colspan="4">Parts</th>
+        </tr>
+        <tr>
+          <th>Length</th>
+          <th>Width</th>
+          <th>Qty.</th>
+          <th class="no-print">Left</th>
+        </tr>
+        <tr>
+          <td colspan="5"><input type="button" value="more..." onclick=addPart() class="btn no-print"></td>
+        </tr>
+      </table>
+
+      <p contenteditable="true" class="big comment">*</p>
+    </div>
+
+    <div class="main">
+      <table id="sheets">
+          <tr>
+              <th>Sheets</th>
+          </tr>
+          <tr>
+            <td><input type="button" value="more..." onclick=addSheet() class="btn no-print"></td>
+          </tr>    
+      </table>
+    </div>
+
+    <div id="menu" style="z-index:123456789;display:none;position:absolute">
+    </div>
+
+    <div id="grandrect" style="display:none;position:relative;cursor:move;z-index:-1;" >
+      <svg style="position:absolute">
+        <rect width=100% height=100% style="fill:rgba(100, 150, 255, 0.3);stroke-width:1;stroke:rgb(0,0,0)"/>
+        <text class="big" x=50% y=5 dominant-baseline="hanging" text-anchor="middle">top</text>
+        <text class="big" x=2 y=50% dominant-baseline="middle" text-anchor="start">left</text>
+      </svg>
+    </div>
+  </body>
+  <script>
+    //------------Global variables--------------
+    var p = {}; //parts
+    var s = {}; //sheets
+    var pid = 0; //"piece ID" - a global counter for IDs
+    var maxwidth = 1.0; //current widest sheet
+    var scale = 1.0;
+    var kerf = parseFloat(document.getElementById("kerf").value); //kerf width from cutting in physical units (mm etc.), gets its value from onload
+    const snaptol = 5.0; //px distance for snapping
+    var zIndex = 10; //starting layer, to be increased for every "bring to front"
+    const oneClick = 500; //milliseconds
+
+    //----------------Functions------------------
+    function addPart() {
+      var table = document.getElementById("parts");
+      var row = table.insertRow(table.rows.length-1);
+      part = {width:1, height:1, qty:0, left:0, id:(++pid).toString(), item:{}};
+      p[pid] = part;
+      row.id = part.id;
+      row.innerHTML = 
+        "<td><input type='number' class='big' value="+part.width+" step='0.01' min='0.01' style='width:4em' onchange='{p["+row.id+"].width=parseFloat(value); updateSheet();}'></td>"+
+        "<td><input type='number' class='big' value="+part.height+" step='0.01' min='0.01' style='width:4em' onchange='{p["+row.id+"].height=parseFloat(value); updateSheet();}'></td>"+
+        "<td><input type='number' class='big' value="+part.qty+" min='0' style='width:3em' onchange='{p["+row.id+"].qty=parseInt(value); updateCount();}'></td>"+
+        "<td class='no-print'>0</td>"+
+        "<td><input type='button' value=&#x274C; onclick=delPart("+row.id+") tabindex=-1 class='btn no-print'></td>";
+      var tofillnext = row.getElementsByTagName("input")[0];
+      tofillnext.focus();
+      tofillnext.select();
+    }
+
+    function delPart(id) {
+      document.getElementById(id).remove();
+
+      var item = p[id].item;
+      for (let key in item) {
+        document.getElementById(key).remove();
+        delete s[item[key].shid].item[key];
+      }
+      delete p[id];
+
+      updateSheet();
+    }
+
+    function addSheet() {
+      var table = document.getElementById("sheets");
+      previd = table.rows[table.rows.length-2].id;
+      var row = table.insertRow(table.rows.length-1);
+
+      sheet = { //new sheet gets dimension of the last one (if such exists)
+        width  : (previd == "" ? maxwidth : s[previd].width), 
+        height : (previd == "" ? 0.5*maxwidth : s[previd].height), //just make some rectangle
+        qty : 1, 
+        id : (++pid).toString(), 
+        item : {}
+      };
+
+      row.id = sheet.id;
+      row.innerHTML = 
+        "<td>"+
+          "Length <input type='number' class='big' value="+sheet.width+" step='0.01' min='0.01' style='width:4em' onchange='s["+row.id+"].width=parseFloat(value); updateSheet();'>"+
+          " &#10006; Width <input type='number' class='big' value="+sheet.height+" step='0.01' min='0.01' style='width:4em' onchange='s["+row.id+"].height=parseFloat(value); updateSheet();'>"+
+          " Qty.: <input type='number' class='big' value="+sheet.qty+" min='0' style='width:3em' onchange='{s["+row.id+"].qty=parseInt(value); updateCount();}'>"+
+          " <input type='button' value=&#x274C; onclick=delSheet("+row.id+") tabindex=-1 class='btn no-print'><br><br>"+
+          "<div>"+
+            "<svg width=1 height=1 onclick=offerPart(event)>"+
+              "<rect class='menuable' width=100% height=100% style='fill:rgba(245,240,240,1);stroke-width:1;stroke:rgb(0,0,0)'/>"+
+            "</svg>"+
+          "</div><p contenteditable='true' class='big comment'>*</p>"+
+        "</td>";
+      row.style = "page-break-inside:avoid;position:relative";
+
+      var tofillnext = row.getElementsByTagName("input")[0];
+      tofillnext.focus();
+      tofillnext.select();
+
+      sheet.svg = row.getElementsByTagName("svg")[0];
+      sheet.rect = row.getElementsByTagName("rect")[0];
+      s[pid] = sheet;
+      updateSheet();
+      updateCount();
+    }
+
+    function delSheet(id) {
+      document.getElementById(id).remove(); //individual parts are childs of the sheet, so they're delete altogether
+      var item = s[id].item;
+      for (let key in item) {
+        delete p[item[key].prtid].item[key];
+      }
+      delete s[id];
+
+      updateSheet();
+    }
+
+    function updateSheet() {
+      //update scale
+      maxwidth = -1.0; 
+      for (var key in s) {
+        if (s[key].width > maxwidth) {
+          maxwidth = s[key].width;
+        }
+      }
+      if (maxwidth < 0.0) {
+        maxwidth = 1.0;
+      }
+
+      scale = (window.innerWidth - 330) / maxwidth;
+
+      //rescaling
+      for (let key in s) {
+        var sheet = s[key];
+        sheet.svg.setAttribute("width", sheet.width * scale);
+        sheet.svg.setAttribute("height", sheet.height * scale);
+
+        for (let id in sheet.item) {
+          updatePart(sheet.item[id].div);
+
+          if (key != findSheet(sheet.item[id].div.getBoundingClientRect().y + window.scrollY)) {
+            deleteOne(id);
+          }
+        }
+      }
+
+      updateCount();
+    }
+
+    function updateCount() {
+      for (let key in p) {
+        p[key].left = p[key].qty;
+      }
+
+      for (let key in s) {
+        var sheet = s[key];
+        for (let id in sheet.item) {
+          p[sheet.item[id].prtid].left -= sheet.qty;
+        }
+      }
+
+      for (let key in p) {
+        document.getElementById(p[key].id).cells[3].innerHTML = p[key].left;
+      }
+    }
+
+    function findSheet(y) {
+      rows = document.getElementById("sheets").rows;
+      var cy = y - window.scrollY;
+      for (let i = rows.length - 2; i >=1 ; i--) { // the first and the last rows are not sheets
+        var top = rows[i].getElementsByTagName("div")[0].getBoundingClientRect().top;
+        if (top < cy) {
+          return rows[i].id;
+        }
+      }
+      return rows[1].id; //if the part got above the first sheet, it still belongs to that
+    }
+
+    function offerPart(event) {
+      menu = document.getElementById("menu");
+      menu.innerHTML="";
+      for (key in p) {
+        menu.innerHTML += "<input type='button' class='btn' value='"+p[key].width+" &#10006; "+p[key].height+
+          "' onclick='spawnPart("+event.pageX+","+event.pageY+","+key+","+event.target.parentElement.parentElement.parentElement.parentElement.id+")'><br>";
+      }
+      menu.style.display = "block";
+      menu.style.left = event.pageX;
+      menu.style.top = event.pageY;
+    }
+
+    window.onclick = function(event) { //hide part menu when clicked elsewhere
+      if (!event.target.matches(".menuable")) {
+        document.getElementById("menu").style.display = "none";
+      }
+    }
+
+    function updatePart(div) {
+      var shid = div.parentElement.id;
+      var part = s[shid].item[div.id];
+
+      var pxwidth = (part.flip ? p[part.prtid].height : p[part.prtid].width) * scale;
+      var pxheight = (part.flip ? p[part.prtid].width : p[part.prtid].height) * scale;
+      var svg = div.getElementsByTagName("svg")[0];
+      svg.setAttribute("width", pxwidth);
+      svg.setAttribute("height", pxheight);
+
+      var texts = div.getElementsByTagName("text");
+      texts[0].innerHTML = (part.flip ? p[part.prtid].height : p[part.prtid].width);
+      texts[1].innerHTML = (part.flip ? p[part.prtid].width : p[part.prtid].height);
+
+      var shrect = div.parentElement.getElementsByTagName("div")[0].getBoundingClientRect();
+      div.style.left = s[shid].item[div.id].left*scale -shrect.width  -shrect.left + document.getElementById(shid).getBoundingClientRect().left;
+      div.style.top = s[shid].item[div.id].top*scale +shrect.top   - document.getElementById(shid).getBoundingClientRect().top;
+    }
+
+    function spawnPart(x, y, id, shid) {
+      var div = document.getElementById("grandrect").cloneNode(true);
+      document.getElementById(shid).appendChild(div);
+
+      div.id = (++pid).toString();
+      var part = p[id];
+      part.item[div.id] = {shid:shid};
+
+      var shrect = document.getElementById(shid).getElementsByTagName("div")[0].getBoundingClientRect();
+      var shleft = shrect.left + window.scrollX;
+      var shtop = shrect.top + window.scrollY;
+      s[shid].item[div.id] = {prtid:part.id, top:(y-shtop)/scale, left:(x-shleft)/scale, flip:false, div:div};
+
+      updatePart(div);
+      div.style.display = "block";
+      div.style.zIndex = ++zIndex;
+
+      menu = document.getElementById("menu");
+      menu.style.display = "none";
+      dragElement(div);
+      div.oncontextmenu = function(e) {e.preventDefault(); deleteOne(div.id);};
+
+      updateCount();
+    }
+
+    function dragElement(elmnt) {
+      var x = 0, y = 0, newX = 0, newY = 0;
+      var clicked = false, clX = 0, clY = 0;
+      elmnt.onmousedown = dragMouseDown;
+
+      function dragMouseDown(e) {
+  	    e = e || window.event;
+        e.preventDefault();
+        // get the mouse cursor position at startup:
+        clicked = true;
+        clX = newX = e.clientX;
+        clY = newY = e.clientY;
+        document.onmouseup = closeDragElement;
+        // call a function whenever the cursor moves:
+        document.onmousemove = elementDrag;
+        elmnt.style.zIndex = ++zIndex;
+        setTimeout(function() {clicked = false;}, oneClick);
+      }
+
+      function elementDrag(e) {
+        e = e || window.event;
+        e.preventDefault();
+
+        var id = elmnt.id;
+        //var shid = elmnt.parentElement.id;
+        var shid = findSheet(elmnt.getBoundingClientRect().y + window.scrollY);
+        if (shid != elmnt.parentElement.id) { //part belongs now to another sheet
+          s[shid].item[id] = s[elmnt.parentElement.id].item[id];
+          delete s[elmnt.parentElement.id].item[id];
+
+          var oldrect = elmnt.getBoundingClientRect();
+          document.getElementById(shid).appendChild(elmnt);
+          var newrect = elmnt.getBoundingClientRect();
+          s[shid].item[id].left += (oldrect.left - newrect.left) / scale;
+          s[shid].item[id].top  += (oldrect.top  - newrect.top)  / scale;
+
+          p[s[shid].item[id].prtid].item[id].shid = shid;
+
+          updateCount();
+        }
+
+        var shrect = elmnt.parentElement.getElementsByTagName("div")[0].getBoundingClientRect();
+        var shtop  = shrect.top + window.scrollY;
+        var shleft = shrect.left + window.scrollX;
+        s[shid].item[id].left + (e.clientX-newX) / scale;
+        var pos = {
+          left : (s[shid].item[id].left + (e.clientX-newX) / scale), 
+          top : s[shid].item[id].top + (e.clientY-newY) / scale
+        };
+        newX = e.clientX;
+        newY = e.clientY;
+
+        var mates = s[shid].item;  //sheetmates for the current part (including part itself)
+        var prt = {width:p[mates[id].prtid].width, height:p[mates[id].prtid].height, flip:mates[id].flip};
+        for (let side of ["left", "top"]) {
+          dim = (side=="left" && !prt.flip || side=="top" && prt.flip) ? "width" : "height";
+
+          var jump = {
+            min:1e9,
+            val:1e9,
+            reset: function(value) {
+              this.val = value;
+              if (Math.abs(this.val) < Math.abs(this.min)) {
+                this.min = this.val;
+              }
+            },
+            update: function(delta) {
+              this.val += delta;
+              if (Math.abs(this.val) < Math.abs(this.min)) {
+                this.min = this.val;
+              }
+            },
+            snap: function() {
+              return (Math.abs(this.min) < snaptol / scale) ? this.min : 0.0;
+            }
+          }
+
+          for (let key in mates) {
+            if (key == id) { //we do not align part with itself
+              continue;
+            }
+            matedim = (side=="left" && !mates[key].flip || side=="top" && mates[key].flip) ? "width" : "height";
+
+            //left to left - no kerf
+            jump.reset(mates[key][side] - pos[side]);
+            //right to left - kerf between
+            jump.update( -(prt[dim] + kerf) );
+            //right to right - no kerf
+            jump.update(p[mates[key].prtid][matedim] + kerf);
+            //left to right - kerf between
+            jump.update(prt[dim] + kerf);
+          }
+          jump.reset(-pos[side]);
+          jump.update(s[shid][side=="left" ? "width" : "height"] - prt[dim]);
+          pos[side] += jump.snap();
+          mates[id][side] = pos[side];
+        }
+        updatePart(elmnt);
+      }
+
+      function closeDragElement(e) {
+        /* stop moving when mouse button is released:*/
+        document.onmouseup = null;
+        document.onmousemove = null;
+        // flip if simply clicked
+        if (clicked && e.clientX == clX && e.clientY == clY) {
+          s[elmnt.parentElement.id].item[elmnt.id].flip = !s[elmnt.parentElement.id].item[elmnt.id].flip;
+          updatePart(elmnt);
+        }
+      }
+    } //end elementDrag()
+
+    function deleteOne(id) {
+      var div = document.getElementById(id);
+      var shid = div.parentElement.id;
+      delete p[s[shid].item[id].prtid].item[id];
+      delete s[shid].item[id];
+      div.remove();
+
+      updateCount();
+    }
+
+    //--------------Initialization-------------
+    addSheet();
+    addPart();
+    document.getElementById("first2fill").focus();
+  </script>
+</html>
