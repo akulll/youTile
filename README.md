@@ -7,6 +7,9 @@ The program consists of a single .html file with some javascript to be opened by
 youTile provides basic interface to create a list of rectangular parts with their respective dimensions and quantities (aka Bill of Materials). You can then nest them on sheets of specified size and plan how many sheets of each kind you will need to realize the inventory. There are no suggestions on the optimum nesting, it justs plots everything in scale, saving time on drawing by hand and tackling with general purpose design software, but not replacing your imagination and creativity (hence the name: "You Tile"). Additionally it takes care about the width of the cutting tool to provide gaps between the parts.
 
 ## Reference
+
+![alt text](./screen.png)
+
 On the left hand side, there is a green pad for some general information such as customer's name and material type. These fields may be left empty or edited afterwards. However, you would like to specify the cutting kerf width before you start nesting your parts, as it will affect snapping them in place with proper gaps.
 
 ### Parts
@@ -32,4 +35,4 @@ youTile updates the "Left" column in accordance with the visual description and 
 ## Possible uses and other tools
 youTile is a small utility, straightforward to learn and use. Although it was developed to simplify day to day routine of cutting sheet material for customer needs, it may find other uses in planning of tiling, parquet flooring or wallpapering.
 
-For truly smart nesting software, take a look at [MaxCut](https://www.maxcutsoftware.com), [iNEST](http://www.i-nesting.com/), [MyNesting](https://www.mynesting.com), [Magi-Cut](https://www.magi-cut.co.uk/cloud/), [SVGnest](https://svgnest.com), [GoNest 2D](http://www.gonest2d.com),  and others.
+For truly smart nesting software, take a look at [MaxCut](https://www.maxcutsoftware.com), [iNEST](http://www.i-nesting.com/), [MyNesting](https://www.mynesting.com), [Magi-Cut](https://www.magi-cut.co.uk/cloud/), [SVGnest](https://svgnest.com), [GoNest 2D](http://www.gonest2d.com)  and others.
