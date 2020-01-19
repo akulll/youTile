@@ -1,4 +1,7 @@
-# youTile
+# youTile 
+
+![alt text](./logo/logo.png) 
+
 A tiny little program for nesting rectangular pieces on rectangular sheets (primarily for cutting).
 
 ## How it works
