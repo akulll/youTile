@@ -22,15 +22,15 @@ Next, you can fill information about the parts. These fields are interactive: ot
 Same thing works for the sheets, except that every line has its sheet drawn right beneath. Interactivity holds here as well.
 
 ### Nesting layouts
-Finally, nesting! Click anywhere in the sheet area and choose the part you want to place there from a drop down list. Left mouse click on the part flips its sides, right mouse click removes the part from the sheet. Drag it anywhere you want to place, note the sticky action when it meets sheet borders or other parts. You can even drag it to another sheet!
+Finally, nesting! Click right mouse button anywhere in the sheet area and choose the part you want to place there from a drop down list. Left mouse click on the part flips its sides, right mouse click removes the part from the sheet. Drag it anywhere you want to place, note the sticky action when it meets sheet borders or other parts. You can even drag it to another sheet! Simple (left) click will insert the recently used part (if such still exists in the list). This speeds up nesting the same part multiple times.
 
 ### Remarks
 Asterisks * on the left and after every sheet provide place for free form comments and remarks (such as "Do it NOW!").
 
 ### Output
-Once you are satisfied with the layout, print it right away from the browser (Ctrl+P should work as well as File->Print or right mouse click -> Print). Options like "Print to file" or "Save as PDF" in the print dialogue allow to save the layout in a printable way as PDF.
+Once you are satisfied with the layout, print it right away from the browser (Ctrl+P should work, as well as File->Print or right mouse click -> Print). Options like "Print to file" or "Save as PDF" in the print dialogue allow to save the layout in a printable way as PDF.
 
-Printing drops some unnecessary information, such as kerf width and "Left" column. Particularly important text is enlarged for easier reading. Some browsers (like Opera) offer "Save as PDF" option in context menu (on right mouse click), this will produce a single (probably long) page document "as is".
+Printing hides some unnecessary information, such as kerf width and the "Left" column. Particularly important text is enlarged for easier reading. Some browsers (like Opera) offer "Save as PDF" option in context menu (on right mouse click), this will produce a single (probably long) page document "as is".
 
 ### Miscellaneous
 youTile updates the "Left" column in accordance with the visual description and "Qty." values. However, please note that every part belongs to some sheet even if it lays outside. Vertical position of the top side of the part determines which sheet it belongs to. Anyway, an adequate location of parts is treated adequately.

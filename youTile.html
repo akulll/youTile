@@ -152,10 +152,11 @@
     var p = {}; //parts
     var s = {}; //sheets
     var pid = 0; //"piece ID" - a global counter for IDs
+    var recentid = -1;
     var maxwidth = 1.0; //current widest sheet
     var scale = 1.0;
     var kerf = parseFloat(document.getElementById("kerf").value); //kerf width from cutting in physical units (mm etc.), gets its value from onload
-    const snaptol = 5.0; //px distance for snapping
+    const snaptol = 20.0; //px distance for snapping
     var zIndex = 10; //starting layer, to be increased for every "bring to front"
     const oneClick = 500; //milliseconds
 
@@ -211,7 +212,7 @@
           " Qty.: <input type='number' class='big' value="+sheet.qty+" min='0' style='width:3em' onchange='{s["+row.id+"].qty=parseInt(value); updateCount();}'>"+
           " <input type='button' value=&#x274C; onclick=delSheet("+row.id+") tabindex=-1 class='btn no-print'><br><br>"+
           "<div>"+
-            "<svg width=1 height=1 onclick=offerPart(event)>"+
+            "<svg width=1 height=1  oncontextmenu=offerPart(event) onclick=spawnRecent(event)>"+
               "<rect class='menuable' width=100% height=100% style='fill:rgba(245,240,240,1);stroke-width:1;stroke:rgb(0,0,0)'/>"+
             "</svg>"+
           "</div><p contenteditable='true' class='big comment'>*</p>"+
@@ -302,6 +303,8 @@
     }
 
     function offerPart(event) {
+      event.preventDefault();
+
       menu = document.getElementById("menu");
       menu.innerHTML="";
       for (key in p) {
@@ -339,6 +342,8 @@
     }
 
     function spawnPart(x, y, id, shid) {
+      recentid = id;
+
       var div = document.getElementById("grandrect").cloneNode(true);
       document.getElementById(shid).appendChild(div);
 
@@ -361,6 +366,13 @@
       div.oncontextmenu = function(e) {e.preventDefault(); deleteOne(div.id);};
 
       updateCount();
+    }
+
+    function spawnRecent(event) {
+      if (!(recentid in p)) {
+        return;
+      }
+      spawnPart(event.pageX, event.pageY, recentid, event.target.parentElement.parentElement.parentElement.parentElement.id);
     }
 
     function dragElement(elmnt) {
@@ -387,7 +399,6 @@
         e.preventDefault();
 
         var id = elmnt.id;
-        //var shid = elmnt.parentElement.id;
         var shid = findSheet(elmnt.getBoundingClientRect().y + window.scrollY);
         if (shid != elmnt.parentElement.id) { //part belongs now to another sheet
           s[shid].item[id] = s[elmnt.parentElement.id].item[id];
@@ -407,13 +418,10 @@
         var shrect = elmnt.parentElement.getElementsByTagName("div")[0].getBoundingClientRect();
         var shtop  = shrect.top + window.scrollY;
         var shleft = shrect.left + window.scrollX;
-        s[shid].item[id].left + (e.clientX-newX) / scale;
         var pos = {
-          left : (s[shid].item[id].left + (e.clientX-newX) / scale), 
+          left : s[shid].item[id].left + (e.clientX-newX) / scale, 
           top : s[shid].item[id].top + (e.clientY-newY) / scale
         };
-        newX = e.clientX;
-        newY = e.clientY;
 
         var mates = s[shid].item;  //sheetmates for the current part (including part itself)
         var prt = {width:p[mates[id].prtid].width, height:p[mates[id].prtid].height, flip:mates[id].flip};
@@ -458,8 +466,15 @@
           jump.reset(-pos[side]);
           jump.update(s[shid][side=="left" ? "width" : "height"] - prt[dim]);
           pos[side] += jump.snap();
+          if (side=="left") {
+            newX = e.clientX + jump.snap()*scale;
+          }
+          else { //side=="top"
+            newY = e.clientY + jump.snap()*scale;
+          }
           mates[id][side] = pos[side];
         }
+
         updatePart(elmnt);
       }
 
