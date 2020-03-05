@@ -47,11 +47,9 @@
         width: 295px;
         position: fixed;
         background: #cfc;
-        height: 100%;
         overflow-x: hidden;
-        overflow-y: scroll;
       }
-
+            
       .main {
         margin-left: 300px; /* Same width as the sidebar + left position in px */
       }
@@ -89,20 +87,11 @@
         {
           font-size : 140%;
         }
-        .partlist, .partlist *
-        {
-          position: static;
-          overflow-y: hidden;
-        }
-        .main, .main *
-        {
-          margin-left: 0px;
-        }
       }
 
     </style>  
   </head>
-  <body onresize=updatePage()>
+  <body>
     <div class="partlist">
       <table>
         <tr>
@@ -137,7 +126,7 @@
     </div>
 
     <div class="main">
-      <table id="sheets" style="width: 100%">
+      <table id="sheets">
           <tr>
               <th>Sheets</th>
           </tr>
@@ -223,7 +212,7 @@
           " Qty.: <input type='number' class='big' value="+sheet.qty+" min='0' style='width:3em' onchange='{s["+row.id+"].qty=parseInt(value); updateCount();}'>"+
           " <input type='button' value=&#x274C; onclick=delSheet("+row.id+") tabindex=-1 class='btn no-print'><br><br>"+
           "<div>"+
-            "<svg width=1 height=1 oncontextmenu=offerPart(event) onclick=spawnRecent(event)>"+
+            "<svg width=1 height=1  oncontextmenu=offerPart(event) onclick=spawnRecent(event)>"+
               "<rect class='menuable' width=100% height=100% style='fill:rgba(245,240,240,1);stroke-width:1;stroke:rgb(0,0,0)'/>"+
             "</svg>"+
           "</div><p contenteditable='true' class='big comment'>*</p>"+
@@ -437,7 +426,7 @@
         var mates = s[shid].item;  //sheetmates for the current part (including part itself)
         var prt = {width:p[mates[id].prtid].width, height:p[mates[id].prtid].height, flip:mates[id].flip};
         for (let side of ["left", "top"]) {
-          var prtdim = p[mates[id].prtid][(side=="left" && !prt.flip || side=="top" && prt.flip) ? "width" : "height"];
+          dim = (side=="left" && !prt.flip || side=="top" && prt.flip) ? "width" : "height";
 
           var jump = {
             min:1e9,
@@ -463,23 +452,24 @@
             if (key == id) { //we do not align part with itself
               continue;
             }
-            var matedim = p[mates[key].prtid][(side=="left" && !mates[key].flip || side=="top" && mates[key].flip) ? "width" : "height"];
+            matedim = (side=="left" && !mates[key].flip || side=="top" && mates[key].flip) ? "width" : "height";
 
             //left to left - no kerf
             jump.reset(mates[key][side] - pos[side]);
             //right to left - kerf between
-            jump.update( -(prtdim + kerf) );
+            jump.update( -(prt[dim] + kerf) );
             //right to right - no kerf
-            jump.update(matedim + kerf);
+            jump.update(p[mates[key].prtid][matedim] + kerf);
             //left to right - kerf between
-            jump.update(prtdim + kerf);
+            jump.update(prt[dim] + kerf);
           }
           jump.reset(-pos[side]);
-          jump.update(s[shid][side=="left" ? "width" : "height"] - prtdim);
+          jump.update(s[shid][side=="left" ? "width" : "height"] - prt[dim]);
           pos[side] += jump.snap();
           if (side=="left") {
             newX = e.clientX + jump.snap()*scale;
-          } else { //side=="top"
+          }
+          else { //side=="top"
             newY = e.clientY + jump.snap()*scale;
           }
           mates[id][side] = pos[side];
@@ -514,7 +504,5 @@
     addSheet();
     addPart();
     document.getElementById("first2fill").focus();
-    //TODO "help button"
-    //TODO "insert recent part should snap somewhere"
   </script>
 </html>
